@@ -5,6 +5,10 @@ from lex import TokenType
 class Parser:
     def __init__(self, lexer):
         self.lexer = lexer
+        
+        self.symbols = set()
+        self.labels_declared = set()
+        self.labels_gotoed = set()
         # initialize twice
         self.cur_token = lexer.get_token()
         self.peek_token = lexer.get_token()
@@ -38,6 +42,10 @@ class Parser:
 
         while not self.check_token(TokenType.EOF):
             self.statement()
+
+        for label in self.labels_gotoed:
+            if label not in self.labels_declared:
+                self.abort(f"attempting to GOTO undeclared label: {label}")
 
     def statement(self):
         """
@@ -76,7 +84,7 @@ class Parser:
             self.next_token()
             self.comparison()
 
-            self.match_token(TokenType.REPEAT)
+            self.match(TokenType.REPEAT)
             self.newline()
 
             while not self.check_token(TokenType.ENDWHILE):
@@ -87,16 +95,26 @@ class Parser:
         elif self.check_token(TokenType.LABEL):
             print("STATEMENT-LABEL")
             self.next_token()
+
+            if self.cur_token.text in self.labels_declared:
+                self.abort(f"label already exists: {self.cur_token.text}")
+            self.labels_declared.add(self.cur_token.text)
+
             self.match(TokenType.IDENT)
         # "GOTO" ident
         elif self.check_token(TokenType.GOTO):
             print("STATEMENT-GOTO")
             self.next_token()
+            self.labels_gotoed.add(self.cur_token.text)
             self.match(TokenType.IDENT)
         # "LET" ident "=" expression
         elif self.check_token(TokenType.LET):
             print("STATEMENT-LET")
             self.next_token()
+
+            if self.cur_token.text not in self.symbols:
+                self.symbols.add(self.cur_token.text)
+
             self.match(TokenType.IDENT)
             self.match(TokenType.EQ)
             self.expression()
@@ -104,6 +122,10 @@ class Parser:
         elif self.check_token(TokenType.INPUT):
             print("STATEMENT-INPUT")
             self.next_token()
+
+            if self.cur_token.text not in self.symbols:
+                self.symbols.add(self.cur_token.text)
+
             self.match(TokenType.IDENT)
         else:
             self.abort(f"invalid statement at {self.cur_token.text}:({self.cur_token.kind.name})")
@@ -173,10 +195,13 @@ class Parser:
         """
         primary ::= number | ident
         """
+        print(f"PRIMARY ({self.cur_token.text})")
 
         if self.check_token(TokenType.NUMBER):
             self.next_token()
         elif self.check_token(TokenType.IDENT):
+            if self.cur_token.text not in self.symbols:
+                self.abort(f"referencing variable before assignment: {self.cur_token.text}")
             self.next_token()
         else:
             self.abort(f"unexpected token at {self.cur_token.text}")
