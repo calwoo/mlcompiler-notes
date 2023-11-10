@@ -1,9 +1,11 @@
+import os
 from lex import Lexer, TokenType
 
 
 def main():
-    # source = "LET foobar = 123"
-    source = "IF+-123 foo*THEN/" 
+    with open(os.path.join(os.path.dirname(__file__), "fib.teeny"), "r") as f:
+        source = f.read()
+
     lexer = Lexer(source)
 
     token = lexer.get_token()
