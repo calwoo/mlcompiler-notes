@@ -1,8 +1,9 @@
 import os
 import sys
 
-from lex import Lexer, TokenType
+from lex import Lexer
 from parse import Parser
+from emit import *
 
 
 def main():
@@ -12,10 +13,12 @@ def main():
         source = f.read()
 
     lexer = Lexer(source)
-    parser = Parser(lexer)
+    emitter = Emitter("out.c")
+    parser = Parser(lexer, emitter)
 
     parser.program()
-    print("parsing finished")
+    emitter.write_file()
+    print("compiling finished")
 
 if __name__ == "__main__":
     main()
