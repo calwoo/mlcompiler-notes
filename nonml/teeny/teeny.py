@@ -1,17 +1,21 @@
 import os
+import sys
+
 from lex import Lexer, TokenType
+from parse import Parser
 
 
 def main():
-    with open(os.path.join(os.path.dirname(__file__), "fib.teeny"), "r") as f:
+    if len(sys.argv) != 2:
+        sys.exit("error: compiler needs source")
+    with open(os.path.abspath(sys.argv[1]), "r") as f:
         source = f.read()
 
     lexer = Lexer(source)
+    parser = Parser(lexer)
 
-    token = lexer.get_token()
-    while token.kind != TokenType.EOF:
-        print(token.kind)
-        token = lexer.get_token()
+    parser.program()
+    print("parsing finished")
 
 if __name__ == "__main__":
     main()
