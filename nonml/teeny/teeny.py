@@ -3,7 +3,7 @@ from lex import Lexer, TokenType
 
 def main():
     # source = "LET foobar = 123"
-    source = "+- */ >>= = !=" 
+    source = "IF+-123 foo*THEN/" 
     lexer = Lexer(source)
 
     token = lexer.get_token()

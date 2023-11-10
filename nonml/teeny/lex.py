@@ -35,10 +35,13 @@ class Lexer:
             self.next_char()
 
     def skip_comment(self):
-        pass
+        if self.cur_char == '#':
+            while self.cur_char != '\n':
+                self.next_char()
 
     def get_token(self):
         self.skip_whitespace()
+        self.skip_comment()
 
         token = None
         if self.cur_char == '+':
@@ -77,6 +80,39 @@ class Lexer:
                 token = Token(last_char + self.cur_char, TokenType.NOTEQ)
             else:
                 self.abort(f"expected !=, got !{self.peek()}")
+        elif self.cur_char == '\"':
+            self.next_char()
+            start_pos = self.cur_pos
+            while self.cur_char != '\"':
+                # illegal chars
+                if self.cur_char in ['\r', '\n', '\t', '\\', '%']:
+                    self.abort("illegal char in string")
+                self.next_char()
+            text = self.source[start_pos: self.cur_pos]
+            token = Token(text, TokenType.STRING)
+        elif self.cur_char.isdigit():
+            start_pos = self.cur_pos
+            while self.peek().isdigit():
+                self.next_char()
+            if self.peek() == '.':
+                self.next_char()
+                if not self.peek().isdigit():
+                    self.abort("illegal character in number")
+                while self.peek().isdigit():
+                    self.next_char()
+            text = self.source[start_pos: self.cur_pos + 1]
+            token = Token(text, TokenType.NUMBER)
+        elif self.cur_char.isalpha():
+            start_pos = self.cur_pos
+            while self.peek().isalnum():
+                self.next_char()
+
+            text = self.source[start_pos: self.cur_pos + 1]
+            keyword = Token.check_if_keyword(text)
+            if keyword is None:
+                token = Token(text, TokenType.IDENT)
+            else:
+                token = Token(text, keyword)
         elif self.cur_char == '\n':
             token = Token(self.cur_char, TokenType.NEWLINE)
         elif self.cur_char == '\0':
@@ -93,6 +129,13 @@ class Token:
     def __init__(self, text, kind):
         self.text = text
         self.kind = kind
+
+    @staticmethod
+    def check_if_keyword(text):
+        for kind in TokenType:
+            if kind.name == text and kind.value >= 4 and kind.value <= 14:
+                return kind
+        return None
 
 
 class TokenType(enum.Enum):
