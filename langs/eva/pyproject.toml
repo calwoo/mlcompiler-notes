@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "eva"
+name = "evalang"
 version = "0.1.0"
 description = ""
 authors = ["calvin d. woo <calvin.d.woo@gmail.com>"]
