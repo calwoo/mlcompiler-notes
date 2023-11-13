@@ -132,6 +132,19 @@ def eval(ast: Exp, env: Env = global_env) -> Exp:
         return func(*args)
 
 if __name__ == "__main__":
-    program = "(begin (define r 10) (* pi (* r r)))"
+    program = """
+        (begin 
+            (define fib
+                (lambda (n)
+                    (if (< n 2)
+                        1
+                        (+ (fib (- n 1)) (fib (- n 2))))))
+            (define range
+                (lambda (a b)
+                    (if (= a b) 
+                        (quote ())
+                        (cons a (range (+ a 1) b)))))
+            (map fib (range 0 25)))
+    """
     ast = parse(program)
-    print(eval(ast))
+    print(list(eval(ast)))
