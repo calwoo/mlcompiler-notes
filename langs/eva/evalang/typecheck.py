@@ -66,10 +66,31 @@ class EvaTC:
             self.expect(cond_type, Type.boolean, cond, exp)
             return self.tc(body, env)
         
+        # function declarations
+        if exp[0] == "def":
+            (_, name, params, _, return_typestr, body) = exp
+            fn_type = self.function(params, return_typestr, body, env)
+            env.define(name, fn_type)
+            return fn_type
+        
         # block
         if exp[0] == "begin":
             block_env = TypeEnvironment(record={}, parent=env)
             return self.block(exp, block_env)   
+        
+        # function calls
+        if isinstance(exp, list):
+            fn_name, *args = exp
+            fn_type = self.tc(fn_name, env)
+            # typecheck args
+            arg_types = [self.tc(arg, env) for arg in args]
+            if len(fn_type.param_types) != len(arg_types):
+                raise Exception(f"not enough args: need {len(fn_type.param_types)}")
+            
+            for arg_t, param_t in zip(arg_types, fn_type.param_types):
+                if arg_t != param_t:
+                    raise Exception(f"mismatched params, need {param_t}, got {arg_t}")
+            return fn_type.return_type
         
         raise ValueError(f"unknown type for: {exp}")
     
@@ -84,6 +105,23 @@ class EvaTC:
         for exp in expressions:
             result = self.tc(exp, env)
         return result
+    
+    def function(self, params, return_typestr, body, env):
+        return_type = Type.from_string(return_typestr)
+        # function bodies create new scope
+        params_record = {}
+        param_types = []
+        for name, typestr in params:
+            param_type = Type.from_string(typestr)
+            params_record[name] = param_type
+            param_types.append(param_type)
+        
+        fn_env = TypeEnvironment(record=params_record, parent=env)
+        actual_return_type = self.tc(body, fn_env)
+
+        if return_type != actual_return_type:
+            raise Exception(f"expected function to return {return_type}, got {actual_return_type}")
+        return Type.function.value(param_types=param_types, return_type=return_type)
     
     def binary(self, exp, env):
         self.check_arity(exp, 2)
