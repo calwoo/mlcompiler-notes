@@ -1,5 +1,6 @@
 import pytest
 from evalang import Eva
+from evalang.parse import parse
 
 
 @pytest.mark.parametrize("expr, expected", [
@@ -32,3 +33,17 @@ def test_if(expr, expected):
 def test_while(expr, expected):
     eva = Eva()
     assert eva.eval(expr) == expected
+
+@pytest.mark.parametrize("expr, expected", [
+    ("""
+    (begin
+        (var x 10)
+        (switch ((= x 10) 100)
+                ((> x 10) 200)
+                (else 300))
+    )
+    """, 100)
+])
+def test_switch(expr, expected):
+    eva = Eva()
+    assert eva.eval(parse(expr)) == expected

@@ -1,5 +1,6 @@
 import pytest
 from evalang import Eva
+from evalang.parse import parse
 
 
 @pytest.mark.parametrize("expr", [1, -1, 0, 3, 5]) 
