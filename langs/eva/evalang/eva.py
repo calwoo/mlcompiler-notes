@@ -49,8 +49,14 @@ class Eva:
         
         """variable update"""
         if exp[0] == "set":
-            (_, name, value) = exp
-            return env.assign(name, self.eval(value, env))
+            (_, ref, value) = exp
+            
+            if ref[0] == "prop":
+                (_, instance, attribute) = ref
+                instance_env = self.eval(instance, env)
+                return instance_env.define(attribute, self.eval(value, env))
+
+            return env.assign(ref, self.eval(value, env))
         
         """variable access"""
         if self.is_variable_name(exp):
@@ -128,6 +134,32 @@ class Eva:
                 "closure": env,
             }
         
+        """class declaration"""
+        if exp[0] == "class":
+            (_, name, parent, body) = exp
+            parent_env = self.eval(parent, env) or env
+            class_env = Environment(record={}, parent=parent_env)
+            self.eval_block(body, class_env)
+            return env.define(name, class_env)
+        
+        """new instance instantiation"""
+        if exp[0] == "new":
+            (_, class_name, *class_args) = exp
+            class_env = self.eval(class_name, env)
+            # instance of a class is an environment
+            instance_env = Environment(record={}, parent=class_env)
+            self.call_user_defined_function(
+                class_env.lookup("constructor"),
+                [instance_env, *class_args]
+            )
+            return instance_env
+        
+        """instance property access"""
+        if exp[0] == "prop":
+            (_, instance, attribute) = exp
+            instance_env = self.eval(instance, env)
+            return instance_env.lookup(attribute)
+        
         """function calls"""
         if isinstance(exp, list):
             fn_name, *args = exp
@@ -140,13 +172,16 @@ class Eva:
                 return fn(*args_evaled)
             
             # user-defined function
-            activation_record = {}
-            for i, arg in enumerate(args_evaled):
-                activation_record[fn["params"][i]] = arg
-            activation_env = Environment(record=activation_record, parent=fn["closure"])
-            return self.eval(fn["body"], activation_env)
+            return self.call_user_defined_function(fn, args_evaled)
 
         raise NotImplementedError(exp)
+    
+    def call_user_defined_function(self, fn, args):
+        activation_record = {}
+        for i, arg in enumerate(args):
+            activation_record[fn["params"][i]] = arg
+        activation_env = Environment(record=activation_record, parent=fn["closure"])
+        return self.eval(fn["body"], activation_env)
     
     def eval_block(self, block, env):
         _, *expressions = block
