@@ -33,9 +33,22 @@ class EvaTC:
                 self.expect(value_type, expected_type, value, exp)
                 return env.define(var_name, expected_type)
             return env.define(name, value_type)
+        
+        if exp[0] == "set":
+            (_, name, value) = exp
+            # just verify that new value is same type as var
+            var_type = self.tc(name, env)
+            val_type = self.tc(value, env)
+            self.expect(val_type, var_type, value, exp)
+            return val_type
 
         if self.is_variable_name(exp):
             return env.lookup(exp)
+        
+        # block
+        if exp[0] == "begin":
+            block_env = TypeEnvironment(record={}, parent=env)
+            return self.block(exp, block_env)   
         
         raise ValueError(f"unknown type for: {exp}")
     
@@ -43,6 +56,13 @@ class EvaTC:
         return TypeEnvironment(record={
             "VERSION": Type.string
         })
+    
+    def block(self, block, env):
+        _, *expressions = block
+        result = None
+        for exp in expressions:
+            result = self.tc(exp, env)
+        return result
     
     def binary(self, exp, env):
         self.check_arity(exp, 2)

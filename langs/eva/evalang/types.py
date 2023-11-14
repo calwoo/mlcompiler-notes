@@ -12,6 +12,7 @@ class TypeBase:
 class Type(Enum):
     number = TypeBase("number")
     string = TypeBase("string")
+    boolean = TypeBase("boolean")
 
     @classmethod
     def from_string(cls, type_str):
@@ -20,5 +21,7 @@ class Type(Enum):
                 return Type.number
             case "string":
                 return Type.string
+            case "boolean":
+                return Type.boolean
             case _:
                 raise Exception(f"unknown type: {type_str}")

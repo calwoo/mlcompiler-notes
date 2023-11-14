@@ -9,5 +9,8 @@ class TypeEnvironment:
 
     def lookup(self, name):
         if name not in self.record:
-            raise Exception(f"variable {name} not found")
+            # identifier resolution
+            if self.parent is None:
+                raise Exception(f"variable {name} not found")
+            return self.parent.lookup(name)
         return self.record[name]

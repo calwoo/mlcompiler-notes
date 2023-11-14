@@ -13,3 +13,8 @@ def test_typecheck_numbers(expr):
 def test_typecheck_strings(expr):
     evatc = EvaTC()
     assert evatc.tc(expr) == Type.string
+
+@pytest.mark.parametrize("expr", ["true", "false"])
+def test_typecheck_strings(expr):
+    evatc = EvaTC()
+    assert evatc.tc(expr) == Type.boolean
