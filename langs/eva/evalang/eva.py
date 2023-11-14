@@ -160,6 +160,11 @@ class Eva:
             instance_env = self.eval(instance, env)
             return instance_env.lookup(attribute)
         
+        """super expressions"""
+        if exp[0] == "super":
+            (_, class_name) = exp
+            return self.eval(class_name, env).parent
+        
         """function calls"""
         if isinstance(exp, list):
             fn_name, *args = exp
