@@ -24,6 +24,9 @@ class EvaTC:
         # math ops
         if self.is_binary(exp):
             return self.binary(exp, env)
+        # bool ops
+        if self.is_boolean_binary(exp):
+            return self.boolean_binary(exp, env)
         # var declarations and access
         if exp[0] == "var":
             (_, name, value) = exp
@@ -46,6 +49,22 @@ class EvaTC:
 
         if self.is_variable_name(exp):
             return env.lookup(exp)
+        
+        # conditionals
+        if exp[0] == "if":
+            (_, cond, t_br, f_br) = exp
+            cond_type = self.tc(cond, env)
+            self.expect(cond_type, Type.boolean, cond, exp)
+
+            t_br_type = self.tc(t_br, env)
+            f_br_type = self.tc(f_br, env)
+            return self.expect(f_br_type, t_br_type, exp, exp)
+        
+        if exp[0] == "while":
+            (_, cond, body) = exp
+            cond_type = self.tc(cond, env)
+            self.expect(cond_type, Type.boolean, cond, exp)
+            return self.tc(body, env)
         
         # block
         if exp[0] == "begin":
@@ -77,6 +96,18 @@ class EvaTC:
         self.expect_operator_type(t1, allowed_types, exp)
         self.expect_operator_type(t2, allowed_types, exp)
         return self.expect(t2, t1, e2, exp)
+    
+    def boolean_binary(self, exp, env):
+        self.check_arity(exp, 2)
+        (op, e1, e2) = exp
+        t1 = self.tc(e1, env)
+        t2 = self.tc(e2, env)
+
+        allowed_types = self.get_operand_types_for_operator(op)
+        self.expect_operator_type(t1, allowed_types, exp)
+        self.expect_operator_type(t2, allowed_types, exp)
+        self.expect(t2, t1, e2, exp)
+        return Type.boolean
 
     def check_arity(self, exp, arity):
         if len(exp) - 1 != arity:
@@ -84,14 +115,16 @@ class EvaTC:
         
     def get_operand_types_for_operator(self, op):
         match op:
-            case '+':
-                return [Type.string, Type.number]
-            case '*':
-                return [Type.number]
-            case '-':
-                return [Type.number]
-            case '/':
-                return [Type.number]
+            case '+': return [Type.string, Type.number]
+            case '*': return [Type.number]
+            case '-': return [Type.number]
+            case '/': return [Type.number]
+            case '>': return [Type.number]
+            case '<': return [Type.number]
+            case ">=": return [Type.number]
+            case "<=": return [Type.number]
+            case "==": return [Type.number, Type.string]
+            case "!=": return [Type.number, Type.string]
             case _:
                 raise Exception(f"unknown op: {op}")
         
@@ -107,6 +140,9 @@ class EvaTC:
     def is_binary(self, exp):
         ops = re.compile(r'^[\+\-\*\/]$')
         return bool(ops.match(exp[0]))
+    
+    def is_boolean_binary(self, exp):
+        return exp[0] in [">", "<", ">=", "<=", "==", "!="]
     
     def is_variable_name(self, exp):
         reg = re.compile(r'^[\+\-\*\/<>=a-zA-Z0-9_:]+$')
