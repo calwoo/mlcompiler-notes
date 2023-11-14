@@ -19,6 +19,8 @@ class EvaTC:
             return Type.number
         if self.is_string(exp):
             return Type.string
+        if self.is_boolean(exp):
+            return Type.boolean
         # math ops
         if self.is_binary(exp):
             return self.binary(exp, env)
@@ -98,6 +100,9 @@ class EvaTC:
 
     def is_string(self, exp):
         return isinstance(exp, str) and exp[0] == '"' and exp[-1] == '"'
+
+    def is_boolean(self, exp):
+        return isinstance(exp, bool) or exp in ["true", "false"]
 
     def is_binary(self, exp):
         ops = re.compile(r'^[\+\-\*\/]$')
