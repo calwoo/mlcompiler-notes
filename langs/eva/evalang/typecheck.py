@@ -69,7 +69,7 @@ class EvaTC:
         # function declarations
         if exp[0] == "def":
             (_, name, params, _, return_typestr, body) = exp
-            fn_type = self.function(params, return_typestr, body, env)
+            fn_type = self.function(name, params, return_typestr, body, env)
             env.define(name, fn_type)
             return fn_type
         
@@ -96,7 +96,9 @@ class EvaTC:
     
     def create_global(self):
         return TypeEnvironment(record={
-            "VERSION": Type.string
+            "VERSION": Type.string,
+            "sum": Type.from_string("fn<number<number,number>>"),
+            "square": Type.from_string("fn<number<number>>")
         })
     
     def block(self, block, env):
@@ -106,17 +108,19 @@ class EvaTC:
             result = self.tc(exp, env)
         return result
     
-    def function(self, params, return_typestr, body, env):
+    def function(self, name, params, return_typestr, body, env):
         return_type = Type.from_string(return_typestr)
         # function bodies create new scope
         params_record = {}
         param_types = []
-        for name, typestr in params:
+        for pname, typestr in params:
             param_type = Type.from_string(typestr)
-            params_record[name] = param_type
+            params_record[pname] = param_type
             param_types.append(param_type)
         
         fn_env = TypeEnvironment(record=params_record, parent=env)
+        # to allow for recursive function type checking
+        fn_env.define(name, Type.function.value(param_types=param_types, return_type=return_type))
         actual_return_type = self.tc(body, fn_env)
 
         if return_type != actual_return_type:
