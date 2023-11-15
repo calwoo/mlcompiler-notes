@@ -40,12 +40,19 @@ class EvaTC:
             return env.define(name, value_type)
         
         if exp[0] == "set":
-            (_, name, value) = exp
+            (_, ref, value) = exp
+            if ref[0] == "prop":
+                (_, instance, prop_name) = ref
+                instance_type = self.tc(instance, env)
+
+                value_type = self.tc(value, env)
+                prop_type = instance_type.get_field(prop_name)
+                return self.expect(value_type, prop_type, value, exp)
+
             # just verify that new value is same type as var
-            var_type = self.tc(name, env)
+            var_type = self.tc(ref, env)
             val_type = self.tc(value, env)
-            self.expect(val_type, var_type, value, exp)
-            return val_type
+            return self.expect(val_type, var_type, value, exp)
 
         if self.is_variable_name(exp):
             return env.lookup(exp)
@@ -73,10 +80,69 @@ class EvaTC:
             env.define(name, fn_type)
             return fn_type
         
+        # lambda
+        if exp[0] == "lambda":
+            (_, params, _, return_typestr, body) = exp
+            fn_type = self.function(None, params, return_typestr, body, env)
+            return fn_type
+        
+        # typedefs
+        if exp[0] == "type":
+            (_, name, base) = exp
+            if name in Type._member_names_:
+                raise Exception(f"type {name} already is defined")
+            if base not in Type._member_names_:
+                raise Exception(f"type {base} not defined")
+            typedef = Type.alias(name, Type.from_string(base))
+            setattr(Type, name, typedef)
+            return typedef
+        
+        # class typedef
+        if exp[0] == "class":
+            (_, name, superclass_name, body) = exp
+            superclass = Type.from_string(superclass_name)
+            class_type = Type.classtype(name=name, superclass=superclass)
+            if class_type.env.parent is None:
+                class_type.env.parent = env
+            setattr(Type, name, class_type)
+            env.define(name, class_type)
+            # eval body
+            self.tc_block(body, class_type.env)
+            return class_type
+        
+        # class instantiation
+        if exp[0] == "new":
+            (_, classname, *args) = exp
+            class_type = Type.from_string(classname)
+            if class_type == Type.from_string("null"):
+                raise Exception("unknown class")
+            
+            arg_types = [self.tc(arg, env) for arg in args]
+            return self.check_function_call(
+                class_type.get_field("constructor"),
+                [class_type, *arg_types],
+                env,
+                exp,
+            )
+        
+        # super (inheritance)
+        if exp[0] == "super":
+            (_, classname) = exp
+            class_type = Type.from_string(classname)
+            if class_type is None:
+                raise Exception(f"unknown class {classname}")
+            return class_type.superclass
+        
+        if exp[0] == "prop":
+            (_, instance, attr) = exp
+            instance_type = self.tc(instance, env)
+            return instance_type.get_field(attr)
+
         # block
         if exp[0] == "begin":
             block_env = TypeEnvironment(record={}, parent=env)
-            return self.block(exp, block_env)   
+            result = self.block(exp, block_env)
+            return result
         
         # function calls
         if isinstance(exp, list):
@@ -84,15 +150,22 @@ class EvaTC:
             fn_type = self.tc(fn_name, env)
             # typecheck args
             arg_types = [self.tc(arg, env) for arg in args]
-            if len(fn_type.param_types) != len(arg_types):
-                raise Exception(f"not enough args: need {len(fn_type.param_types)}")
-            
-            for arg_t, param_t in zip(arg_types, fn_type.param_types):
-                if arg_t != param_t:
-                    raise Exception(f"mismatched params, need {param_t}, got {arg_t}")
-            return fn_type.return_type
+            return self.check_function_call(fn_type, arg_types, env, exp)
         
         raise ValueError(f"unknown type for: {exp}")
+    
+    def tc_block(self, block, env):
+        result = self.block(block, env)
+        return result
+    
+    def check_function_call(self, fn_type, arg_types, env, exp):
+        if len(fn_type.param_types) != len(arg_types):
+            raise Exception(f"not enough args: need {len(fn_type.param_types)}")
+        
+        for arg_t, param_t in zip(arg_types, fn_type.param_types):
+            if arg_t != param_t:
+                raise Exception(f"mismatched params, need {param_t}, got {arg_t}")
+        return fn_type.return_type
     
     def create_global(self):
         return TypeEnvironment(record={
@@ -117,15 +190,16 @@ class EvaTC:
             param_type = Type.from_string(typestr)
             params_record[pname] = param_type
             param_types.append(param_type)
-        
         fn_env = TypeEnvironment(record=params_record, parent=env)
-        # to allow for recursive function type checking
-        fn_env.define(name, Type.function.value(param_types=param_types, return_type=return_type))
+
+        if name is not None:
+            # to allow for recursive function type checking
+            fn_env.define(name, Type.function(param_types=param_types, return_type=return_type))
         actual_return_type = self.tc(body, fn_env)
 
         if return_type != actual_return_type:
             raise Exception(f"expected function to return {return_type}, got {actual_return_type}")
-        return Type.function.value(param_types=param_types, return_type=return_type)
+        return Type.function(param_types=param_types, return_type=return_type)
     
     def binary(self, exp, env):
         self.check_arity(exp, 2)
@@ -180,13 +254,19 @@ class EvaTC:
         return isinstance(exp, bool) or exp in ["true", "false"]
 
     def is_binary(self, exp):
+        if isinstance(exp, list) and isinstance(exp[0], list):
+            return False
         ops = re.compile(r'^[\+\-\*\/]$')
         return bool(ops.match(exp[0]))
     
     def is_boolean_binary(self, exp):
+        if isinstance(exp, list) and isinstance(exp[0], list):
+            return False
         return exp[0] in [">", "<", ">=", "<=", "==", "!="]
     
     def is_variable_name(self, exp):
+        if isinstance(exp, list) and isinstance(exp[0], list):
+            return False
         reg = re.compile(r'^[\+\-\*\/<>=a-zA-Z0-9_:]+$')
         return isinstance(exp, str) and bool(reg.match(exp))
     
