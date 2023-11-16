@@ -63,7 +63,25 @@ class EvaTC:
             cond_type = self.tc(cond, env)
             self.expect(cond_type, Type.boolean, cond, exp)
 
-            t_br_type = self.tc(t_br, env)
+            """
+            for dealing with union types, we can use expressions like'
+
+            (if (== (typeof variable) "number") ...)
+
+            in which case, we want to update the type environment when
+            type checking the true-branch once we evaluate the clause
+            (typeof variable)-- this is type narrowing.
+            """
+
+            union_env = env
+            if self.is_type_cast_condition(cond):
+                (name, specific_type) = self.get_specified_type(cond)
+                union_env = TypeEnvironment(
+                    {name: Type.from_string(specific_type)},
+                    env
+                )
+
+            t_br_type = self.tc(t_br, union_env)
             f_br_type = self.tc(f_br, env)
             return self.expect(f_br_type, t_br_type, exp, exp)
         
@@ -172,6 +190,8 @@ class EvaTC:
             raise Exception(f"not enough args: need {len(fn_type.param_types)}")
         
         for arg_t, param_t in zip(arg_types, fn_type.param_types):
+            if param_t == Type.from_string("any"):
+                continue
             if arg_t != param_t:
                 raise Exception(f"mismatched params, need {param_t}, got {arg_t}")
         return fn_type.return_type
@@ -180,7 +200,8 @@ class EvaTC:
         return TypeEnvironment(record={
             "VERSION": Type.string,
             "sum": Type.from_string("fn<number<number,number>>"),
-            "square": Type.from_string("fn<number<number>>")
+            "square": Type.from_string("fn<number<number>>"),
+            "typeof": Type.from_string("fn<string<any>>")
         })
     
     def block(self, block, env):
@@ -278,6 +299,19 @@ class EvaTC:
             return False
         reg = re.compile(r'^[\+\-\*\/<>=a-zA-Z0-9_:]+$')
         return isinstance(exp, str) and bool(reg.match(exp))
+    
+    def is_type_cast_condition(self, condition):
+        # (if (== (typeof variable) "number") ...)
+        op, *args = condition
+        if isinstance(args[0], list):
+            return op == "==" and args[0][0] == "typeof"
+        return False
+    
+    def get_specified_type(self, condition):
+        # returns specific type after a typecast
+        # (if (== (typeof variable) "number") ...)
+        (_, [_, varname], expected_type) = condition
+        return [varname, expected_type.replace('"', "")]
     
     def expect(self, actual_type, expected_type, value, exp):
         if actual_type != expected_type:

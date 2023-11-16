@@ -94,6 +94,7 @@ class Type(Enum):
     string = TypeBase("string")
     boolean = TypeBase("boolean")
     null = TypeBase("null")
+    any = TypeBase("any")
 
     @classmethod
     def function(cls, *args, **kwargs):
@@ -114,12 +115,6 @@ class Type(Enum):
     @classmethod
     def from_string(cls, type_str):
         match type_str:
-            case "number":
-                return Type.number.value
-            case "string":
-                return Type.string.value
-            case "boolean":
-                return Type.boolean.value
             case s if s.startswith("fn<"):
                 _, return_type, param_types = s.split("<")
                 param_types = param_types.replace(">", "").split(",")

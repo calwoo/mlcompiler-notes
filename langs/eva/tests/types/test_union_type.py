@@ -54,3 +54,19 @@ def test_union_type_3():
     with pytest.raises(Exception):
         evatc = EvaTC()
         evatc.tc(parse(expr))
+
+def test_type_narrowing():
+    expr = """
+    (begin
+        (type value (or number string))
+    
+        (def accept ((x value)) -> value
+            (begin
+                (if (== (typeof x) "number")
+                    (- 1 x)
+                    (+ "y" x))))
+        
+        (accept 10))
+    """
+    evatc = EvaTC()
+    assert evatc.tc(parse(expr)) == Type.string
