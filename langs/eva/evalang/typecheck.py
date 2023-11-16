@@ -1,5 +1,5 @@
 import re
-from evalang.types import Type
+from evalang.types import Type, TypeUnionBase
 from evalang.typeenvironment import TypeEnvironment
 
 
@@ -89,6 +89,15 @@ class EvaTC:
         # typedefs
         if exp[0] == "type":
             (_, name, base) = exp
+
+            # union type
+            if base[0] == "or":
+                options = base[1:]
+                options_types = [Type.from_string(opt) for opt in options]
+                union_type = Type.union(name, options_types)
+                setattr(Type, name, union_type)
+                return union_type
+
             if name in Type._member_names_:
                 raise Exception(f"type {name} already is defined")
             if base not in Type._member_names_:
@@ -276,8 +285,15 @@ class EvaTC:
         return actual_type
     
     def expect_operator_type(self, _type, allowed_types, exp):
-        if _type not in allowed_types:
-            raise Exception(f"unexpected type {_type} in {exp}, allowed types are {allowed_types}")
+        # for union types, all subtypes should support operation
+        if isinstance(_type, TypeUnionBase):
+            if _type.includes_all(allowed_types):
+                return
+        else:
+            if _type in allowed_types:
+                return
+                
+        raise Exception(f"unexpected type {_type} in {exp}, allowed types are {allowed_types}")
     
     def type_error(self, actual_type, expected_type, value, exp):
         raise Exception(f"expected {expected_type} type for {value} in {exp}, got {actual_type}")

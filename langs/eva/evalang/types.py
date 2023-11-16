@@ -58,6 +58,35 @@ class TypeClassBase(TypeBase):
         if self.superclass != TypeBase("null"):
             return self.superclass == other
         return False
+    
+class TypeUnionBase(TypeBase):
+    def __init__(self, name, option_types):
+        self.name = name
+        self.option_types = option_types
+
+    def includes_all(self, types):
+        if len(types) != len(self.option_types):
+            return False
+        for type_ in types:
+            if self != type_:
+                return False
+        return True
+
+    def __eq__(self, other):
+        if self.name == other.name:
+            return True
+        if isinstance(other, TypeAliasBase):
+            return other == self
+        
+        # other union
+        if isinstance(other, TypeUnionBase):
+            return self.includes_all(other.option_types)
+        
+        match = False
+        for opt in self.option_types:
+            if opt == other:
+                match = True
+        return match
 
 # type repo
 class Type(Enum):
@@ -77,6 +106,10 @@ class Type(Enum):
     @classmethod
     def classtype(cls, *args, **kwargs):
         return TypeClassBase(*args, **kwargs)
+    
+    @classmethod
+    def union(cls, *args, **kwargs):
+        return TypeUnionBase(*args, **kwargs)
 
     @classmethod
     def from_string(cls, type_str):
