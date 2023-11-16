@@ -1,5 +1,5 @@
 import re
-from evalang.types import Type, TypeUnionBase
+from evalang.types import Type, TypeUnionBase, TypeGenericFunctionBase
 from evalang.typeenvironment import TypeEnvironment
 
 
@@ -93,13 +93,30 @@ class EvaTC:
         
         # function declarations
         if exp[0] == "def":
-            (_, name, params, _, return_typestr, body) = exp
-            fn_type = self.function(name, params, return_typestr, body, env)
-            env.define(name, fn_type)
-            return fn_type
+            if not self.is_generic_def_function(exp):
+                (_, name, params, _, return_typestr, body) = exp
+                fn_type = self.function(name, params, return_typestr, body, env)
+                env.define(name, fn_type)
+                return fn_type
+
+            desugared_exp = self.transform_def_to_var_lambda(exp)
+            return self.tc(desugared_exp, env)
         
         # lambda
         if exp[0] == "lambda":
+            if self.is_generic_function(exp):
+                # generic functions are checked dynamically, at that time
+                # we will reify all typevars
+                (_, generic_typestr, params, _, return_typestr, body) = exp
+                return Type.generic_function(
+                    None,
+                    generic_typestr[1:-1],
+                    params,
+                    return_typestr,
+                    body,
+                    env # for dynamic closure
+                )
+
             (_, params, _, return_typestr, body) = exp
             fn_type = self.function(None, params, return_typestr, body, env)
             return fn_type
@@ -175,11 +192,56 @@ class EvaTC:
         if isinstance(exp, list):
             fn_name, *args = exp
             fn_type = self.tc(fn_name, env)
+
+            if isinstance(fn_type, TypeGenericFunctionBase):
+                actual_types = self.extract_actual_call_types(exp)
+                # map generic typevars to actual types
+                typemap = self.map_typevars(fn_type.generic_typestr, actual_types)
+                # bind typevars to param types
+                bound_params, bound_return_typestr = self.bind_function_types(
+                    fn_type.params,
+                    fn_type.return_typestr,
+                    typemap
+                )
+                # create a function with reified types
+                fn_type = self.function(
+                    None,
+                    bound_params,
+                    bound_return_typestr,
+                    fn_type.body,
+                    fn_type.env,
+                )
+                args = args[1:]
+
             # typecheck args
             arg_types = [self.tc(arg, env) for arg in args]
             return self.check_function_call(fn_type, arg_types, env, exp)
         
         raise ValueError(f"unknown type for: {exp}")
+    
+    def map_typevars(self, generic_typestrs, actual_typestrs):
+        typemap = {
+            generic_typestr: actual_typestr
+            for generic_typestr, actual_typestr
+            in zip(generic_typestrs, actual_typestrs)
+        }
+        return typemap
+    
+    def bind_function_types(self, params, return_typestr, typemap):
+        bound_params = []
+        for param_name, param_type in params:
+            bound_param_type = param_type
+            # generic typevars get bound with actual types
+            if param_type in typemap:
+                bound_param_type = typemap.get(param_type)
+            bound_params.append((param_name, bound_param_type))
+        
+        # bind return value
+        bound_return_type = return_typestr
+        if return_typestr in typemap:
+            bound_return_type = typemap.get(return_typestr)
+        
+        return bound_params, bound_return_type
     
     def tc_block(self, block, env):
         result = self.block(block, env)
@@ -307,11 +369,40 @@ class EvaTC:
             return op == "==" and args[0][0] == "typeof"
         return False
     
+    def is_generic_function(self, exp):
+        # (lambda <K> ((x K) ...) -> K (+ x x))
+        return len(exp) == 6 and exp[1].startswith("<") and exp[1].endswith(">")
+    
+    def is_generic_def_function(self, exp):
+        # (def funcname <K> ((x K) ...) -> K (+ x x))
+        return len(exp) == 7 and exp[2].startswith("<") and exp[2].endswith(">")
+    
     def get_specified_type(self, condition):
         # returns specific type after a typecast
         # (if (== (typeof variable) "number") ...)
         (_, [_, varname], expected_type) = condition
         return [varname, expected_type.replace('"', "")]
+    
+    def extract_actual_call_types(self, exp):
+        # in function call with a generic function needs reified type
+        # (fn_name <type> param1 param2 ...)
+        type_param = exp[1]
+        if not (type_param.startswith("<") and type_param.endswith(">")):
+            raise Exception(f"no actual type given in generic function call: {exp}")
+
+        types = type_param[1:-1]
+        return types.split(',')
+
+    # syntactic sugar transform
+    def transform_def_to_var_lambda(self, exp):
+        # generic function
+        if self.is_generic_def_function(exp):
+            (_, name, generic_typestr, params, _, return_typestr, body) = exp
+            return ["var", name, ["lambda", generic_typestr, params, "->", return_typestr, body]]
+
+        # normal function
+        (_, name, params, _, return_typestr, body) = exp
+        return ["var", name, ["lambda", params, "->", return_typestr, body]]
     
     def expect(self, actual_type, expected_type, value, exp):
         if actual_type != expected_type:

@@ -30,6 +30,15 @@ class TypeFunctionBase(TypeBase):
                 return False
         return self.return_type == other.return_type
     
+class TypeGenericFunctionBase(TypeBase):
+    def __init__(self, name=None, generic_typestr=None, params=None, return_typestr=None, body=None, env=None):
+        self.name = name
+        self.generic_typestr = generic_typestr
+        self.params = params
+        self.return_typestr = return_typestr
+        self.body = body
+        self.env = env
+    
 class TypeAliasBase(TypeBase):
     def __init__(self, name, parent):
         self.name = name
@@ -99,6 +108,10 @@ class Type(Enum):
     @classmethod
     def function(cls, *args, **kwargs):
         return TypeFunctionBase(*args, **kwargs)
+    
+    @classmethod
+    def generic_function(cls, *args, **kwargs):
+        return TypeGenericFunctionBase(*args, **kwargs)
     
     @classmethod
     def alias(cls, *args, **kwargs):
