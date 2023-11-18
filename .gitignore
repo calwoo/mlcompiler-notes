@@ -5,3 +5,4 @@ __pycache__/
 data/
 a.out
 .pytest_cache/
+.vscode/
