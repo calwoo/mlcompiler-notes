@@ -9,7 +9,10 @@
 
 class EvaLLVM {
     public:
-        EvaLLVM() { moduleInit(); }
+        EvaLLVM() { 
+            moduleInit();
+            setupExternFunctions();
+        }
         
         // executes program
         void exec(const std::string& program) {
@@ -44,16 +47,36 @@ class EvaLLVM {
             // compile main body
             auto result = gen(/* ast */);
 
-            // cast to i32 and return from main
-            auto i32Result = builder->CreateIntCast(result, builder->getInt32Ty(), true);
-            builder->CreateRet(i32Result);
+            builder->CreateRet(builder->getInt32(0));
         }
 
         /**
          * main compile loop
         */
         llvm::Value* gen(/* exp */) {
-            return builder->getInt32(42);
+            // return builder->getInt32(42);
+
+            auto str = builder->CreateGlobalStringPtr("hello world!\n");
+            auto printfFn = module->getFunction("printf");
+            
+            std::vector<llvm::Value*> args{str};
+
+            return builder->CreateCall(printfFn, args);
+        }
+
+        /**
+         * define external functions (from libc++)
+        */
+        void setupExternFunctions() {
+            // i8* to substitute for char*, void*, etc
+            auto bytePtrTy = builder->getInt8Ty()->getPointerTo();
+
+            // int printf(const char* format, ...)
+            module->getOrInsertFunction("printf", 
+                llvm::FunctionType::get(
+                    /* return type */ builder->getInt32Ty(),
+                    /* format arg */ bytePtrTy,
+                    /* vararg */ true));
         }
 
         llvm::Function* createFunction(const std::string& fnName,

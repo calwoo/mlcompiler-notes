@@ -4,4 +4,3 @@ build:
 run:
 	./eva
 	lli ./out.ll
-	echo $?
