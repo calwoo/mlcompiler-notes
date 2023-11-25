@@ -2,12 +2,14 @@
 #define EvaLLVM_H
 
 #include <string>
+#include <regex>
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
 
 #include "./parser/EvaParser.h"
+using namespace syntax;
 
 class EvaLLVM {
     public:
@@ -26,6 +28,7 @@ class EvaLLVM {
 
             // print generated code
             module->print(llvm::outs(), nullptr);
+            std::cout << "\n";
 
             // save module IR to file
             saveModuleToFile("./out.ll");
@@ -58,8 +61,13 @@ class EvaLLVM {
             switch (exp.type) {
                 case ExpType::NUMBER:
                     return builder->getInt32(exp.number);
-                case ExpType::STRING:
-                    return builder->CreateGlobalStringPtr(exp.string);
+                case ExpType::STRING: {
+                    // unescape special chars
+                    auto re = std::regex("\\\\n");
+                    auto str = std::regex_replace(exp.string, re, "\n");
+
+                    return builder->CreateGlobalStringPtr(str);
+                }
                 case ExpType::SYMBOL:
                     // TODO
                     return builder->getInt32(0);
