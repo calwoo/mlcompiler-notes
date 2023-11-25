@@ -4,6 +4,8 @@
 #include <stdlib.h>
 %}
 
+%option c++
+
 white           [ \t]+
 digit           [0-9]
 integer         {digit}+
