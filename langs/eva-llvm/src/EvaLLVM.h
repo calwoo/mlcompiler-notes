@@ -7,9 +7,11 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
 
+#include "./parser/EvaParser.h"
+
 class EvaLLVM {
     public:
-        EvaLLVM() { 
+        EvaLLVM() : parser(std::make_unique<EvaParser>()) { 
             moduleInit();
             setupExternFunctions();
         }
@@ -17,11 +19,10 @@ class EvaLLVM {
         // executes program
         void exec(const std::string& program) {
             // parse program
-            // auto ast = parser->parse(program);
+            auto ast = parser->parse(program);
 
             // compile to LLVM-IR
-            // compile(ast);
-            compile();
+            compile(ast);
 
             // print generated code
             module->print(llvm::outs(), nullptr);
@@ -37,7 +38,7 @@ class EvaLLVM {
             builder = std::make_unique<llvm::IRBuilder<>>(*ctx);
         }
 
-        void compile() {
+        void compile(const Exp& ast) {
             // create main function
             fn = createFunction(
                 "main", 
@@ -45,7 +46,7 @@ class EvaLLVM {
             );
 
             // compile main body
-            auto result = gen(/* ast */);
+            gen(ast);
 
             builder->CreateRet(builder->getInt32(0));
         }
@@ -53,15 +54,35 @@ class EvaLLVM {
         /**
          * main compile loop
         */
-        llvm::Value* gen(/* exp */) {
-            // return builder->getInt32(42);
+        llvm::Value* gen(const Exp& exp) {
+            switch (exp.type) {
+                case ExpType::NUMBER:
+                    return builder->getInt32(exp.number);
+                case ExpType::STRING:
+                    return builder->CreateGlobalStringPtr(exp.string);
+                case ExpType::SYMBOL:
+                    // TODO
+                    return builder->getInt32(0);
+                case ExpType::LIST:
+                    auto tag = exp.list[0];
+                    
+                    if (tag.type == ExpType::SYMBOL) {
+                        auto op = tag.string;
 
-            auto str = builder->CreateGlobalStringPtr("hello world!\n");
-            auto printfFn = module->getFunction("printf");
-            
-            std::vector<llvm::Value*> args{str};
+                        if (op == "printf") {
+                            auto printfFn = module->getFunction("printf");
+                            std::vector<llvm::Value*> args{};
 
-            return builder->CreateCall(printfFn, args);
+                            for (auto i = 1; i < exp.list.size(); i++) {
+                                args.push_back(gen(exp.list[i]));
+                            }
+
+                            return builder->CreateCall(printfFn, args);
+                        }
+                    }
+            }
+
+            return builder->getInt32(0);
         }
 
         /**
@@ -115,6 +136,11 @@ class EvaLLVM {
             llvm::raw_fd_ostream outLL(fileName, errorCode);
             module->print(outLL, nullptr);
         }
+
+        /**
+         * parser
+        */
+        std::unique_ptr<EvaParser> parser;
 
         /**
          * current function
