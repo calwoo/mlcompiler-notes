@@ -1,9 +1,11 @@
 from lexer import Lexer
 from parser import Parser
+from codegen import CodeGen
 
 
 lexer = Lexer()
-parser = Parser()
+codegen = CodeGen()
+parser = Parser(codegen)
 
 if __name__ == "__main__":
     with open("test.toy", "r") as f:
@@ -13,3 +15,6 @@ if __name__ == "__main__":
     ast = parser.parse(tokens)
 
     ast.eval()
+
+    print(codegen.compile())
+    codegen.save_ir()

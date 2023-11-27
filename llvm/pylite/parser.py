@@ -3,7 +3,11 @@ import ast
 
 
 class Parser:
-    def __init__(self):
+    def __init__(self, codegen):
+        module = codegen.module
+        builder = codegen.builder
+        printf_fn = codegen.printf
+
         pg = ParserGenerator([
             "PRINT",
             "LPAREN",
@@ -16,20 +20,20 @@ class Parser:
 
         @pg.production("program : PRINT LPAREN expression RPAREN SEMICOLON")
         def program(p):
-            return ast.Print(p[2])
+            return ast.Print(module, builder, printf_fn, p[2])
         
         @pg.production("expression : expression PLUS expression")
         @pg.production("expression : expression MINUS expression")
         def expression(p):
             left, op, right = p
             if op.gettokentype() == "PLUS":
-                return ast.Sum(left, right)
+                return ast.Sum(module, builder, left, right)
             elif op.gettokentype() == "MINUS":
-                return ast.Sub(left, right)
+                return ast.Sub(module, builder, left, right)
             
         @pg.production("expression : NUMBER")
         def number(p):
-            return ast.Number(p[0].value)
+            return ast.Number(module, builder, p[0].value)
         
         @pg.error
         def error(token):
