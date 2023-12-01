@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include "lexer.h"
+#include "parser.h"
 
 
 int main()
@@ -14,6 +15,8 @@ int main()
     for (auto tok : tokens) {
         std::cout << tok << std::endl;
     }
+
+    Parser parser = Parser(tokens);
 
     return 0;
 }
