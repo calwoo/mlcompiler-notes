@@ -9,8 +9,8 @@ std::ostream& Expr::print(std::ostream& os) {
 
 std::ostream& SExpr::print(std::ostream& os) {
     os << "[ ";
-    for (auto d : data) {
-        os << d << " ";
+    for (auto const& d : data) {
+        os << *d << " ";
     }
     os << "]";
     return os;
@@ -18,5 +18,15 @@ std::ostream& SExpr::print(std::ostream& os) {
 
 std::ostream& IdenExpr::print(std::ostream& os) {
     os << name << ":id";
+    return os;
+}
+
+std::ostream& NumExpr::print(std::ostream& os) {
+    os << value << ":num";
+    return os;
+}
+
+std::ostream& StrExpr::print(std::ostream& os) {
+    os << value << ":str";
     return os;
 }
