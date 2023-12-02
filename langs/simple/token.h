@@ -8,6 +8,7 @@ enum TokenType {
     STRING,
     LPAREN,
     RPAREN,
+    ENDFILE
 };
 
 class Token {

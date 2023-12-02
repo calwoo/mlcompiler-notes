@@ -3,6 +3,7 @@
 #include "token.h"
 #include "ast.h"
 #include <vector>
+#include "token.h"
 
 class Parser {
     private:
@@ -17,5 +18,5 @@ class Parser {
         std::unique_ptr<Expr> string();
         std::unique_ptr<Expr> identifier();
         Token peek();
-        bool consume();
+        void consume(TokenType t);
 };

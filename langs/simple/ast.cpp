@@ -16,7 +16,7 @@ std::ostream& SExpr::print(std::ostream& os) {
     return os;
 }
 
-// print dispatcher
-// std::ostream& operator<<(std::ostream& os, Expr& e) {
-//     return e.print(os);
-// }
+std::ostream& IdenExpr::print(std::ostream& os) {
+    os << name << ":id";
+    return os;
+}

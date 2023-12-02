@@ -11,12 +11,14 @@ int main()
 
     Tokenizer tokenizer = Tokenizer(program);
 
-    std::cout << "parsing: " << program << std::endl;
+    std::cout << "program: " << program << std::endl;
+    std::cout << "lexing:" << std::endl;
     std::vector<Token> tokens = tokenizer.scan();
     for (auto tok : tokens) {
         std::cout << tok << std::endl;
     }
 
+    std::cout << "parsing:" << std::endl;
     Parser parser = Parser(tokens);
     std::unique_ptr<Expr> ast = parser.parse();
 
