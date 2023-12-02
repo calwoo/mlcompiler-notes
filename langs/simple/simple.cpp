@@ -18,9 +18,9 @@ int main()
     }
 
     Parser parser = Parser(tokens);
-    Expr ast = parser.parse();
+    std::unique_ptr<Expr> ast = parser.parse();
 
-    std::cout << ast << std::endl;
+    std::cout << *ast << std::endl;
 
     Expr e1 = Expr();
     std::cout << e1 << std::endl;

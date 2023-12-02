@@ -17,7 +17,4 @@ class SExpr : public Expr {
         std::vector<Expr> data;
         SExpr(std::vector<Expr>& data) : data(data) {};
         std::ostream& print(std::ostream& os) override;
-        // friend std::ostream& operator<<(std::ostream& out, SExpr& e) {
-        //     return e.print(out);
-        // }
 };

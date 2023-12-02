@@ -11,11 +11,11 @@ class Parser {
     
     public:
         Parser(std::vector<Token>& tokens) : tokens(tokens), current(0) {};
-        Expr parse();
-        Expr expression();
-        Expr number();
-        Expr string();
-        Expr identifier();
+        std::unique_ptr<Expr> parse();
+        std::unique_ptr<Expr> expression();
+        std::unique_ptr<Expr> number();
+        std::unique_ptr<Expr> string();
+        std::unique_ptr<Expr> identifier();
         Token peek();
         bool consume();
 };

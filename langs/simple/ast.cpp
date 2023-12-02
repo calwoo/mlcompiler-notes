@@ -8,12 +8,11 @@ std::ostream& Expr::print(std::ostream& os) {
 }
 
 std::ostream& SExpr::print(std::ostream& os) {
-    // os << "[ ";
-    // for (auto d : data) {
-    //     os << d << " ";
-    // }
-    // os << "]";
-    os << "s-expression";
+    os << "[ ";
+    for (auto d : data) {
+        os << d << " ";
+    }
+    os << "]";
     return os;
 }
 
