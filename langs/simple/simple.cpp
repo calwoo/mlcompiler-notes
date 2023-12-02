@@ -2,6 +2,7 @@
 #include <string>
 #include "lexer.h"
 #include "parser.h"
+#include "ast.h"
 
 
 int main()
@@ -17,9 +18,19 @@ int main()
     }
 
     Parser parser = Parser(tokens);
-    auto ast = parser.parse();
+    Expr ast = parser.parse();
 
     std::cout << ast << std::endl;
+
+    Expr e1 = Expr();
+    std::cout << e1 << std::endl;
+
+    std::vector<Expr> data = std::vector<Expr>();
+    SExpr e2 = SExpr(data);
+    std::cout << e2 << std::endl;
+
+    Expr e3 = SExpr(data);
+    std::cout << e3 << std::endl;
 
     return 0;
 }
