@@ -17,6 +17,9 @@ int main()
     }
 
     Parser parser = Parser(tokens);
+    auto ast = parser.parse();
+
+    std::cout << ast << std::endl;
 
     return 0;
 }
