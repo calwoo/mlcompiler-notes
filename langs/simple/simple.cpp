@@ -23,16 +23,5 @@ int main()
     std::unique_ptr<Expr> ast = parser.parse();
 
     std::cout << *ast << std::endl;
-
-    // Expr e1 = Expr();
-    // std::cout << e1 << std::endl;
-
-    // std::vector<Expr> data = std::vector<Expr>();
-    // SExpr e2 = SExpr(data);
-    // std::cout << e2 << std::endl;
-
-    // Expr e3 = SExpr(data);
-    // std::cout << e3 << std::endl;
-
     return 0;
 }
