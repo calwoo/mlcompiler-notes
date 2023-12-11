@@ -96,8 +96,16 @@ static void treeFactory(GenericTree<int>& tree) {
   // Build the contents of tree so that it matches the diagram above
   // when you print it out. The main() function runs that test for you.
 
-  // ...
+  tree.clear();
 
+  GenericTree<int>::TreeNode* root = tree.createRoot(4);
+  GenericTree<int>::TreeNode* left = root->addChild(8);
+  GenericTree<int>::TreeNode* right = root->addChild(15);
+
+  GenericTree<int>::TreeNode* leftleft = left->addChild(16);
+  leftleft->addChild(42);
+
+  left->addChild(23);
 }
 
 // treeFactoryTest: This function demonstrates the execution of treeFactory
@@ -324,7 +332,22 @@ std::vector<T> traverseLevels(GenericTree<T>& tree) {
   // Remember that you can add a copy of an item to the back of a std::vector
   // with the .push_back() member function.
 
-  // ...
+  std::queue<TreeNode*> q;
+  q.push(rootNodePtr);
+
+  while (!q.empty()) {
+    // pop off front of queue
+    TreeNode* node = q.front();
+    q.pop();
+
+    // add to list
+    results.push_back(node->data);
+
+    // add children to queue
+    for (TreeNode* child : node->childrenPtrs) {
+      q.push(child);
+    }
+  }
 
   return results;
 }
