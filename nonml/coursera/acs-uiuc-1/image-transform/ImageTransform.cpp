@@ -67,6 +67,16 @@ PNG grayscale(PNG image) {
  * @return The image with a spotlight.
  */
 PNG createSpotlight(PNG image, int centerX, int centerY) {
+  for (unsigned int x = 0; x < image.width(); x++) {
+    for (unsigned int y = 0; y < image.height(); y++) {
+      HSLAPixel& pixel = image.getPixel(x, y);
+
+      double distance_from_center = sqrt(pow(centerX - (double)x, 2) + 
+                                         pow(centerY - (double)y, 2));
+      double lum_drop = min(distance_from_center * 0.005, 0.8);
+      pixel.l *= (1.0 - lum_drop);
+    }
+  }
 
   return image;
   
@@ -84,6 +94,19 @@ PNG createSpotlight(PNG image, int centerX, int centerY) {
  * @return The illinify'd image.
 **/
 PNG illinify(PNG image) {
+  double bound1 = 113.5;
+  double bound2 = 293.5;
+  for (unsigned int x = 0; x < image.width(); x++) {
+    for (unsigned int y = 0; y < image.height(); y++) {
+      HSLAPixel& pixel = image.getPixel(x, y);
+
+      if (pixel.h >= bound1 && pixel.h < bound2) {
+        pixel.h = 216.0;
+      } else {
+        pixel.h = 11.0;
+      }
+    }
+  }
 
   return image;
 }
@@ -102,6 +125,18 @@ PNG illinify(PNG image) {
 * @return The watermarked image.
 */
 PNG watermark(PNG firstImage, PNG secondImage) {
+  unsigned int overlap_width = min(firstImage.width(), secondImage.width());
+  unsigned int overlap_height = min(firstImage.height(), secondImage.height());
 
+  for (unsigned int x = 0; x < overlap_width; x++) {
+    for (unsigned int y = 0; y < overlap_height; y++) {
+      HSLAPixel& pixel = firstImage.getPixel(x, y);
+      HSLAPixel& stencil_pixel = secondImage.getPixel(x, y);
+
+      if (stencil_pixel.l == 1.0) {
+        pixel.l = min(pixel.l + 0.2, 1.0);
+      }
+    }
+  }
   return firstImage;
 }
