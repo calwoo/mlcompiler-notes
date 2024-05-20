@@ -52,11 +52,20 @@ type btree = Leaf of int | Node of int * btree * btree
 
 (* Continuation passing helper function for 'all_prime_cps'. *)
 let rec all_prime_helper_cps (t : btree) (kont : bool -> bool) : bool =
-  raise Not_implemented
+  match t with
+  | Leaf n ->
+      let num_factors = List.length (factors_cps n) in
+      kont (num_factors = 1)
+  | Node (n, l, r) ->
+      let num_factors = List.length (factors_cps n) in
+      let n_prime = num_factors = 1 in
+      all_prime_helper_cps l (fun left_prime ->
+          all_prime_helper_cps r (fun right_prime ->
+              kont (n_prime && left_prime && right_prime)))
 
 (* Returns true if all vertices (leaves & nodes) in a btree are prime;
    otherwise, returns false. Uses helper funciton 'all_prime_helper_cps'. *)
-let all_prime_cps (t : btree) : bool = raise Not_implemented
+let all_prime_cps (t : btree) : bool = all_prime_helper_cps t (fun x -> x)
 
 (**************)
 (* Problem 1c *)
@@ -65,12 +74,15 @@ let all_prime_cps (t : btree) : bool = raise Not_implemented
 (* Continuation passing helper function for 'zip_with_cps'. *)
 let rec zip_with_helper_cps (x : 'a list) (y : 'b list) (f : 'a -> 'b -> 'c)
     (kont : 'c list -> 'c list) : 'c list =
-  raise Not_implemented
+  match (x, y) with
+  | [], [] -> kont []
+  | x :: xs, y :: ys -> zip_with_helper_cps xs ys f (fun r -> kont (f x y :: r))
+  | _ -> raise Runtime
 
 (* Zips two lists into a single list, given a function that combines list
    elements pair-wise. Uses helper function 'zip_with_helper_cps'. *)
 let zip_with_cps (x : 'a list) (y : 'b list) (f : 'a -> 'b -> 'c) : 'c list =
-  raise Not_implemented
+  zip_with_helper_cps x y f (fun x -> x)
 
 (*************)
 (* Problem 2 *)
